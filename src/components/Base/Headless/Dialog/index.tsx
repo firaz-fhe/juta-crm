@@ -92,7 +92,7 @@ Dialog.Panel = ({
         leave="ease-in-out duration-[400ms]"
         leaveFrom="opacity-100 pt-16"
         leaveTo="opacity-0 -mt-16 pt-0"
-        className="fixed inset-0 pb-16 overflow-y-auto"
+        className="fixed inset-0 pb-16 overflow-y-auto flex items-center justify-center"
       >
         <HeadlessDialog.Panel
           as={as}

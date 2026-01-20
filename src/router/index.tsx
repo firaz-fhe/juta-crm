@@ -73,6 +73,8 @@ import SplitTest from "../pages/SplitTest";
 import ThankYou from "../pages/ThankYou";
 import OnboardingDemo from "../pages/OnboardingDemo";
 import FacebookLeadManager from "../pages/FacebookLeadManager";
+import WhatsAppCallback from "../pages/WhatsAppCallback";
+import ContactSync from "../pages/ContactSync";
 
 function Router() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -103,6 +105,7 @@ function Router() {
         { path: "ticket", element: <Ticket /> },
                     { path: "crud-form", element: <CrudForm /> },
             { path: "settings", element: <Settings /> },
+            { path: "contact-sync", element: <ContactSync /> },
             { path: "feedback-form-builder", element: <FeedbackFormBuilder /> },
             { path: "data-import", element: <DataImport /> },
         { path: "quick-replies", element: <QuickReplies /> },
@@ -128,6 +131,7 @@ function Router() {
         { path: "/dashboard/blast-history", element: <BlastHistory /> },
         { path: "users-layout-2/quick-replies", element: <QuickReplies /> },
         { path: "users-layout-2/settings", element: <Settings /> },
+        { path: "users-layout-2/contact-sync", element: <ContactSync /> },
         { path: "users-layout-2/automations", element: <Automations /> },
         { path: "users-layout-2/follow-ups", element: <FollowUps /> },
         { path: "users-layout-2/follow-ups-select", element: <SelectFollowUpMode /> },
@@ -197,6 +201,7 @@ function Router() {
     { path: "/register", element: <Register /> },
   
     { path: "/loading", element: <LoadingIcon />},
+    { path: "/whatsapp-callback", element: <WhatsAppCallback /> },
     { path: "/error-page", element: <ErrorPage /> },
     { path: "*", element: <ErrorPage /> },
   ];

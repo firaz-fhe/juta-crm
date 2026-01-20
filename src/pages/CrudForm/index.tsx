@@ -40,7 +40,7 @@ function Main() {
   const [phoneNames, setPhoneNames] = useState<{ [key: number]: string }>({});
 
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const baseUrl = "https://bisnesgpt.jutateknologi.com";
+  const baseUrl = "http://localhost:8443";
 
   // Get current user email for comparison
   const getCurrentUserEmail = () => {

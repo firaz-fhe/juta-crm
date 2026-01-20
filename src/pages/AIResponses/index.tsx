@@ -141,7 +141,7 @@ function AIResponses() {
   const [tagActionMode, setTagActionMode] = useState<"add" | "delete">("add");
   const [companyId, setCompanyId] = useState<string>("");
   const [apiUrl, setApiUrl] = useState<string>("");
-  const baseUrl = "https://bisnesgpt.jutateknologi.com";
+  const baseUrl = "http://localhost:8443";
   const darkMode = useAppSelector(selectDarkMode);
 
   // Fetch company ID

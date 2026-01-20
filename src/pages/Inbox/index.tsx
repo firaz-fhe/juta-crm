@@ -15,6 +15,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 import { json } from "stream/consumers";
+import BotFlowBuilder from "@/components/BotFlowBuilder";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCc0oSHlqlX7fLeqqonODsOIC3XA8NI7hc",
@@ -669,6 +670,10 @@ const Main: React.FC = () => {
   const [showAiToolsDropdown, setShowAiToolsDropdown] = useState(false);
   const [showAiToolsSection, setShowAiToolsSection] = useState(false);
 
+  // Bot Mode state
+  const [botMode, setBotMode] = useState<"ai" | "bot">("ai");
+  const [showBotBuilder, setShowBotBuilder] = useState(false);
+
   // Fullscreen mode state
   const location = useLocation();
   const navigate = useNavigate();
@@ -1100,7 +1105,7 @@ const Main: React.FC = () => {
     try {
       // Get user config to get companyId
       const userResponse = await fetch(
-        `https://bisnesgpt.jutateknologi.com/api/user/config?email=${encodeURIComponent(
+        `http://localhost:8443/api/user/config?email=${encodeURIComponent(
           userEmail
         )}`,
         {
@@ -1140,7 +1145,7 @@ const Main: React.FC = () => {
       }
 
       const response = await axios.get(
-        `https://bisnesgpt.jutateknologi.com/api/user-company-data?email=${encodeURIComponent(
+        `http://localhost:8443/api/user-company-data?email=${encodeURIComponent(
           userEmail
         )}`
       );
@@ -1172,7 +1177,7 @@ const Main: React.FC = () => {
         setAssistants(assistantConfigs);
 
         const response2 = await axios.get(
-          `https://bisnesgpt.jutateknologi.com/api/company-config/${companyId}`
+          `http://localhost:8443/api/company-config/${companyId}`
         );
 
         const { openaiApiKey } = response2.data;
@@ -1299,7 +1304,7 @@ const Main: React.FC = () => {
         try {
           const timestamp = new Date().toLocaleString();
           const templateResponse = await axios.post(
-            "https://bisnesgpt.jutateknologi.com/api/instruction-templates",
+            "http://localhost:8443/api/instruction-templates",
             {
               companyId,
               name: timestamp,
@@ -1351,7 +1356,7 @@ const Main: React.FC = () => {
       if (!userEmail || !companyId) return [];
 
       // Get company API URL
-      const baseUrl = "https://bisnesgpt.jutateknologi.com";
+      const baseUrl = "http://localhost:8443";
       const companyResponse = await fetch(
         `${baseUrl}/api/user-company-data?email=${encodeURIComponent(
           userEmail
@@ -1592,7 +1597,7 @@ const Main: React.FC = () => {
       console.log("Using threadId:", currentThreadId);
 
       const res = await axios.get(
-        `https://bisnesgpt.jutateknologi.com/api/assistant-test/`,
+        `http://localhost:8443/api/assistant-test/`,
         {
           params: {
             message: messageText,
@@ -1830,7 +1835,7 @@ const Main: React.FC = () => {
   const fetchFiles = async () => {
     if (!companyId) return;
 
-    const baseUrl = "https://bisnesgpt.jutateknologi.com";
+    const baseUrl = "http://localhost:8443";
 
     try {
       // Get user email for API calls
@@ -1903,7 +1908,7 @@ const Main: React.FC = () => {
     if (!file || !companyId) return;
 
     setUploading(true);
-    const baseUrl = "https://bisnesgpt.jutateknologi.com";
+    const baseUrl = "http://localhost:8443";
 
     try {
       // Get user email for API calls
@@ -2114,7 +2119,7 @@ const Main: React.FC = () => {
   const deleteFile = async (fileId: string) => {
     if (!companyId) return;
 
-    const baseUrl = "https://bisnesgpt.jutateknologi.com";
+    const baseUrl = "http://localhost:8443";
 
     try {
       // Get user email for API calls
@@ -2268,7 +2273,7 @@ const Main: React.FC = () => {
     try {
       // Fetch templates from your SQL backend
       const response = await axios.get(
-        `https://bisnesgpt.jutateknologi.com/api/instruction-templates?companyId=${encodeURIComponent(
+        `http://localhost:8443/api/instruction-templates?companyId=${encodeURIComponent(
           companyId
         )}`
       );
@@ -2294,7 +2299,7 @@ const Main: React.FC = () => {
 
       // Send to your SQL backend
       const response = await axios.post(
-        "https://bisnesgpt.jutateknologi.com/api/instruction-templates",
+        "http://localhost:8443/api/instruction-templates",
         {
           companyId,
           name: timestamp,
@@ -2328,7 +2333,7 @@ const Main: React.FC = () => {
     try {
       // Delete template from backend
       const response = await axios.delete(
-        `https://bisnesgpt.jutateknologi.com/api/instruction-templates/${templateId}`
+        `http://localhost:8443/api/instruction-templates/${templateId}`
       );
 
       if (response.data.success) {
@@ -2374,7 +2379,7 @@ const Main: React.FC = () => {
 
     try {
       const response = await axios.get(
-        `https://bisnesgpt.jutateknologi.com/api/ai-settings?companyId=${encodeURIComponent(
+        `http://localhost:8443/api/ai-settings?companyId=${encodeURIComponent(
           companyId
         )}`
       );
@@ -2395,7 +2400,7 @@ const Main: React.FC = () => {
 
     try {
       const response = await axios.put(
-        "https://bisnesgpt.jutateknologi.com/api/ai-settings",
+        "http://localhost:8443/api/ai-settings",
         {
           companyId,
           settings: {
@@ -2801,13 +2806,56 @@ const Main: React.FC = () => {
                   </svg>
                 </div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
-                  AI Assistant Configuration
+                  {showBotBuilder ? "Bot Flow Builder" : "AI Assistant Configuration"}
                 </h1>
+              </div>
+              
+              {/* Mode Toggle */}
+              <div className="flex items-center gap-3">
+                <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-lg rounded-2xl p-1 border border-white/30 dark:border-slate-700/40 shadow-lg">
+                  <button
+                    onClick={() => {
+                      setBotMode("ai");
+                      setShowBotBuilder(false);
+                    }}
+                    className={`px-4 py-2 rounded-xl transition-all duration-300 ${
+                      botMode === "ai"
+                        ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-slate-700/50"
+                    }`}
+                  >
+                    🤖 AI Mode
+                  </button>
+                  <button
+                    onClick={() => {
+                      setBotMode("bot");
+                      setShowBotBuilder(true);
+                    }}
+                    className={`px-4 py-2 rounded-xl transition-all duration-300 ${
+                      botMode === "bot"
+                        ? "bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-slate-700/50"
+                    }`}
+                  >
+                    🎯 Bot Mode
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Conditional Rendering: Show Bot Builder or Normal AI Config */}
+        {showBotBuilder && companyId ? (
+          <BotFlowBuilder
+            companyId={companyId}
+            onBack={() => {
+              setShowBotBuilder(false);
+              setBotMode("ai");
+            }}
+          />
+        ) : (
+          <>
         {/* Main Content Area with Enhanced Glassmorphism */}
         <div className="max-w-7xl mx-auto p-4 pb-8">
           <div
@@ -4299,6 +4347,8 @@ const Main: React.FC = () => {
 
           <ToastContainer />
         </div>
+        </>
+        )}
       </div>
     </div>
   );

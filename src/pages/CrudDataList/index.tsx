@@ -640,7 +640,7 @@ function Main() {
     };
   });
 
-  const baseUrl = "https://bisnesgpt.jutateknologi.com";
+  const baseUrl = "http://localhost:8443";
 
   // Add this useEffect to save visible columns when they change
   useEffect(() => {
@@ -2546,7 +2546,7 @@ function Main() {
         return;
       }
       const companyData = docSnapshot.data();
-      const baseUrl = companyData.apiUrl || "https://bisnesgpt.jutateknologi.com";
+      const baseUrl = companyData.apiUrl || "http://localhost:8443";
       let message = `Hello ${
         assignedEmployee.name
       }, a new contact has been assigned to you:\n\nName: ${
@@ -4078,7 +4078,7 @@ function Main() {
         multiple: multiple,
       };
 
-      // Make API call to bisnesgpt.jutateknologi.com
+      // Make API call to localhost:8443
       const response = await axios.post(
         `${baseUrl}/api/schedule-message/${companyId}`,
         scheduledMessageData
@@ -4227,7 +4227,7 @@ function Main() {
       }
 
       const companyData = docSnapshot.data();
-      const baseUrl = companyData.apiUrl || "https://bisnesgpt.jutateknologi.com";
+      const baseUrl = companyData.apiUrl || "http://localhost:8443";
       const accessToken = companyData.ghl_accessToken;
       const whapiToken = companyData.whapiToken;
       const phoneNumber = id.split("+")[1];

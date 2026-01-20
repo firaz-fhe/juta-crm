@@ -39,7 +39,7 @@ const AIResponseBuilder: React.FC<AIResponseBuilderProps> = ({ onClose }) => {
   const [uploadedFileUrls, setUploadedFileUrls] = useState<string[]>([]);
 
   // Base URL for API calls
-  const baseUrl = 'https://bisnesgpt.jutateknologi.com';
+  const baseUrl = 'http://localhost:8443';
 
   // File upload functions
   const uploadFile = async (file: File): Promise<string> => {

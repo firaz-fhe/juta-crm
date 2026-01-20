@@ -8,7 +8,7 @@ function PublicRegisterForm() {
   const navigate = useNavigate();
   const { phone } = useParams<{ phone: string }>();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [baseUrl] = useState<string>('https://bisnesgpt.jutateknologi.com');
+  const [baseUrl] = useState<string>('http://localhost:8443');
   
   // Add error state for better error handling
   const [errors, setErrors] = useState<string[]>([]);

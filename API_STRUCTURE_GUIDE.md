@@ -12,9 +12,9 @@ This React application uses a combination of Firebase for authentication and rea
 
 ```typescript
 // Current Pattern - Duplicated in multiple files
-const baseUrl = "https://bisnesgpt.jutateknologi.com"; // Main backend server
+const baseUrl = "http://localhost:8443"; // Main backend server
 // OR
-import.meta.env.VITE_API_BASE_URL || 'https://bisnesgpt.jutateknologi.com'
+import.meta.env.VITE_API_BASE_URL || 'http://localhost:8443'
 ```
 
 **HTTP Clients Used**:
@@ -433,7 +433,7 @@ const handleDelete = async (employeeEmail: string) => {
 const fetchUserConfig = async (userEmail: string) => {
   try {
     const response = await fetch(
-      `https://bisnesgpt.jutateknologi.com/api/user-company-data?email=${encodeURIComponent(userEmail)}`,
+      `http://localhost:8443/api/user-company-data?email=${encodeURIComponent(userEmail)}`,
       {
         method: "GET",
         headers: {
@@ -479,7 +479,7 @@ export const sendWhatsAppMessage = async ({
 
     // Send request
     const response = await fetch(
-      `https://bisnesgpt.jutateknologi.com/api/v2/messages/text/${companyId}/${formattedContactId}`,
+      `http://localhost:8443/api/v2/messages/text/${companyId}/${formattedContactId}`,
       {
         method: 'POST',
         headers: {
@@ -633,7 +633,7 @@ Create a single API client to avoid duplication:
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-                     'https://bisnesgpt.jutateknologi.com';
+                     'http://localhost:8443';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -694,7 +694,7 @@ export const userService = {
 ### 9.3 Environment Variables
 ```
 # .env.local
-VITE_API_BASE_URL=https://bisnesgpt.jutateknologi.com
+VITE_API_BASE_URL=http://localhost:8443
 VITE_FIREBASE_API_KEY=AIzaSyCc0oSHlqlX7fLeqqonODsOIC3XA8NI7hc
 VITE_FIREBASE_PROJECT_ID=onboarding-a5fcb
 ```

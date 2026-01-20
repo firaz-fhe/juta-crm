@@ -14,7 +14,7 @@ import ReactPaginate from 'react-paginate';
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 
 // Configuration
-const baseUrl = "https://bisnesgpt.jutateknologi.com"; // Your PostgreSQL server URL
+const baseUrl = "http://localhost:8443"; // Your PostgreSQL server URL
 
 // Types
 interface Employee {

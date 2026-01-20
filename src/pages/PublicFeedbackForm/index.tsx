@@ -51,7 +51,7 @@ function PublicFeedbackForm() {
   const [certificateStatus, setCertificateStatus] = useState<'pending' | 'success' | 'error' | null>(null);
   const [responses, setResponses] = useState<{ [fieldId: string]: string | number }>({});
   const [phoneNumber, setPhoneNumber] = useState( '+60');
-  const [baseUrl] = useState<string>('https://bisnesgpt.jutateknologi.com');
+  const [baseUrl] = useState<string>('http://localhost:8443');
   const [showAlreadySubmittedAlert, setShowAlreadySubmittedAlert] = useState(false);
 
   useEffect(() => {

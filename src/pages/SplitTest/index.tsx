@@ -60,7 +60,7 @@ const SplitTest: React.FC = () => {
     try {
       // Get user config to get companyId
       const userResponse = await fetch(
-        `https://bisnesgpt.jutateknologi.com/api/user/config?email=${encodeURIComponent(
+        `http://localhost:8443/api/user/config?email=${encodeURIComponent(
           userEmail
         )}`,
         {
@@ -99,7 +99,7 @@ const SplitTest: React.FC = () => {
       }
 
       const response = await axios.get(
-        `https://bisnesgpt.jutateknologi.com/api/user-company-data?email=${encodeURIComponent(
+        `http://localhost:8443/api/user-company-data?email=${encodeURIComponent(
           userEmail
         )}`
       );
@@ -109,7 +109,7 @@ const SplitTest: React.FC = () => {
         console.log(companyData);
         
         const response2 = await axios.get(
-          `https://bisnesgpt.jutateknologi.com/api/company-config/${companyId}`
+          `http://localhost:8443/api/company-config/${companyId}`
         );
 
         const { openaiApiKey } = response2.data;
@@ -129,7 +129,7 @@ const SplitTest: React.FC = () => {
     try {
       // Fetch variations from backend API
       const response = await axios.get(
-        `https://bisnesgpt.jutateknologi.com/api/split-test/variations?companyId=${companyId}`
+        `http://localhost:8443/api/split-test/variations?companyId=${companyId}`
       );
       
       if (response.status === 200) {
@@ -196,7 +196,7 @@ const SplitTest: React.FC = () => {
     
     try {
       const response = await axios.post(
-        "https://bisnesgpt.jutateknologi.com/api/split-test/variations",
+        "http://localhost:8443/api/split-test/variations",
         {
           companyId,
           variations: variations.map(v => ({
@@ -267,7 +267,7 @@ const SplitTest: React.FC = () => {
     
     try {
       const response = await axios.delete(
-        `https://bisnesgpt.jutateknologi.com/api/split-test/variations/${variationId}?companyId=${companyId}`
+        `http://localhost:8443/api/split-test/variations/${variationId}?companyId=${companyId}`
       );
       
       if (response.status === 200) {
@@ -287,7 +287,7 @@ const SplitTest: React.FC = () => {
     
     try {
       const response = await axios.patch(
-        `https://bisnesgpt.jutateknologi.com/api/split-test/variations/${variationId}/toggle`,
+        `http://localhost:8443/api/split-test/variations/${variationId}/toggle`,
         { companyId }
       );
       

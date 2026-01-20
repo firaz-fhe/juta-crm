@@ -176,7 +176,7 @@ function SettingsPage() {
       const dynamicApiUrl =
         userCompanyData?.companyData?.api_url || companyData.apiUrl;
  
-      setApiUrl("https://bisnesgpt.jutateknologi.com");
+      setApiUrl("http://localhost:8443");
 
       // Set phone and AI settings from company config
       setPhoneCount(companyData.phoneCount || 0);
@@ -206,7 +206,7 @@ function SettingsPage() {
       }
 
       // 5. Fetch phone status and names now that we have both companyId and apiUrl
-      const finalApiUrl = "https://bisnesgpt.jutateknologi.com";
+      const finalApiUrl = "http://localhost:8443";
       if (userCompanyId && finalApiUrl) {
         try {
           // Fetch phone status immediately with the correct API URL

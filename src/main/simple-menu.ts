@@ -41,6 +41,11 @@ const menu: Array<Menu | "divider"> = [
       pathname: "/calendar",
       title: "Calendar",
     },
+    {
+      icon: "Upload",
+      pathname: "/contact-sync",
+      title: "Contact Sync",
+    },
     "divider",
     {
       icon: "Users",

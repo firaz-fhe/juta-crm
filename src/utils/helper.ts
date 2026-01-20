@@ -255,7 +255,7 @@ const sendWhatsAppMessage = async ({
 
     // Make API call to send WhatsApp message
     const response = await fetch(
-      `https://bisnesgpt.jutateknologi.com/api/v2/messages/text/${companyId}/${formattedContactId}`,
+      `http://localhost:8443/api/v2/messages/text/${companyId}/${formattedContactId}`,
       {
         method: 'POST',
         headers: {

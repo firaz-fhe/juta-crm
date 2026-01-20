@@ -5,6 +5,9 @@ import LoadingIcon from "@/components/Base/LoadingIcon";
 import { useConfig } from "../../config";
 import Progress from "@/components/Base/Progress";
 import LZString from "lz-string";
+import { Dialog } from "@/components/Base/Headless";
+import ConnectionTypeModal from "../../components/ConnectionTypeModal";
+import Dialog360Connect from "../../components/Dialog360Connect";
 interface Contact {
   chat_id: string;
   chat_pic?: string | null;
@@ -56,7 +59,7 @@ interface BotStatusResponse {
 }
 
 function LoadingPage2() {
-  const baseUrl = "https://bisnesgpt.jutateknologi.com";
+  const baseUrl = "http://localhost:8443";
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +99,14 @@ function LoadingPage2() {
   const [isReinitializing, setIsReinitializing] = useState(false);
   const [reinitializeCooldown, setReinitializeCooldown] = useState(0);
   const [reinitializeTimer, setReinitializeTimer] = useState<NodeJS.Timeout | null>(null);
-  
+
+  // Connection type modal state
+  const [showConnectionTypeModal, setShowConnectionTypeModal] = useState(false);
+  const [showDialog360Connect, setShowDialog360Connect] = useState(false);
+  const [pendingPhoneIndex, setPendingPhoneIndex] = useState<number | undefined>(undefined);
+  const [hasCheckedInitialStatus, setHasCheckedInitialStatus] = useState(false);
+  const [selectedConnectionType, setSelectedConnectionType] = useState<'qr' | 'official' | null>(null);
+
   // Debug useEffect to monitor state changes
   useEffect(() => {
     console.log("State changed - isQRLoading:", isQRLoading, "qrCodeImage:", !!qrCodeImage, "isLoading:", isLoading);
@@ -139,7 +149,7 @@ function LoadingPage2() {
 
       // Get user config to get companyId
       const userResponse = await fetch(
-        `https://bisnesgpt.jutateknologi.com/api/user/config?email=${encodeURIComponent(
+        `http://localhost:8443/api/user/config?email=${encodeURIComponent(
           userEmail
         )}`,
         {
@@ -161,7 +171,7 @@ function LoadingPage2() {
 
       // Get all bot status and company data in one call
       const statusResponse = await fetch(
-        `https://bisnesgpt.jutateknologi.com/api/bot-status/${companyId}`,
+        `http://localhost:8443/api/bot-status/${companyId}`,
         {
           method: "GET",
           headers: {
@@ -392,7 +402,7 @@ function LoadingPage2() {
 
       // Get user config to get companyId
       const userResponse = await fetch(
-        `https://bisnesgpt.jutateknologi.com/api/user/config?email=${encodeURIComponent(userEmail)}`,
+        `http://localhost:8443/api/user/config?email=${encodeURIComponent(userEmail)}`,
         {
           method: "GET",
           headers: {
@@ -410,7 +420,7 @@ function LoadingPage2() {
       const userData = await userResponse.json();
       const companyId = userData.company_id;
 
-      const response = await fetch('https://bisnesgpt.jutateknologi.com/api/bots/reinitialize', {
+      const response = await fetch('http://localhost:8443/api/bots/reinitialize', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -480,6 +490,69 @@ function LoadingPage2() {
     }
   };
 
+  // Connection type selection handlers
+  const handleReinitializeClick = (phoneIndex?: number) => {
+    setPendingPhoneIndex(phoneIndex);
+    setShowConnectionTypeModal(true);
+  };
+
+  const handleConnectionTypeSelect = async (type: 'qr' | 'official') => {
+    console.log("Connection type selected:", type);
+    setShowConnectionTypeModal(false);
+    setSelectedConnectionType(type);
+
+    if (type === 'qr') {
+      // Proceed with existing wwebjs QR code flow
+      if (pendingPhoneIndex !== undefined) {
+        // Reinitializing an existing phone
+        reinitializeBot(pendingPhoneIndex);
+      } else {
+        // Initial connection - fetch QR code
+        fetchQRCode();
+      }
+    } else {
+      // Ensure we have companyId before showing dialog
+      if (!companyId) {
+        console.log("CompanyId not set, fetching...");
+        try {
+          const email = localStorage.getItem("userEmail");
+          if (!email) {
+            console.error("No user email found");
+            setError("Please login first");
+            return;
+          }
+
+          const response = await fetch(`${baseUrl}/api/user-context?email=${encodeURIComponent(email)}`);
+          if (!response.ok) throw new Error("Failed to fetch user context");
+
+          const data = await response.json();
+          console.log("Fetched companyId:", data.companyId);
+          setCompanyId(data.companyId);
+        } catch (err) {
+          console.error("Error fetching companyId:", err);
+          setError("Failed to fetch company information");
+          return;
+        }
+      }
+
+      console.log("Showing Dialog360Connect with companyId:", companyId);
+      // Show 360dialog connect component
+      setShowDialog360Connect(true);
+    }
+  };
+
+  const handleDialog360Success = () => {
+    setShowDialog360Connect(false);
+    setPendingPhoneIndex(undefined);
+    // Refresh the page to show the new connection
+    window.location.reload();
+  };
+
+  const handleDialog360Cancel = () => {
+    setShowDialog360Connect(false);
+    setPendingPhoneIndex(undefined);
+  };
+
   const handlePhoneSelection = (phoneIndex: number) => {
     setSelectedPhoneIndex(phoneIndex);
     const selectedPhone = phones && phones.find(p => p.phoneIndex === phoneIndex);
@@ -493,9 +566,52 @@ function LoadingPage2() {
   };
 
   useEffect(() => {
-    if (isAuthReady) {
-    fetchQRCode();
-    }
+    const checkInitialStatus = async () => {
+      if (!isAuthReady || hasCheckedInitialStatus) return;
+
+      setHasCheckedInitialStatus(true);
+
+      try {
+        const email = localStorage.getItem("userEmail");
+        if (!email) {
+          console.error("No user email found");
+          return;
+        }
+
+        const response = await fetch(`${baseUrl}/api/user-context?email=${encodeURIComponent(email)}`);
+        if (!response.ok) throw new Error("Failed to fetch user context");
+
+        const data = await response.json();
+        const userCompanyId = data.companyId;
+
+        // Check bot status
+        const statusResponse = await fetch(`${baseUrl}/bot-status/${userCompanyId}`);
+        if (!statusResponse.ok) throw new Error("Failed to fetch bot status");
+
+        const statusData = await statusResponse.json();
+
+        // Check if any phone is ready/authenticated
+        const hasConnectedPhone = statusData.phones?.some(
+          (phone: Phone) => phone.status === 'ready' || phone.status === 'authenticated'
+        ) || statusData.status === 'ready' || statusData.status === 'authenticated';
+
+        if (!hasConnectedPhone) {
+          // No connection exists, show connection type modal
+          console.log("No existing connection found, showing connection type modal");
+          setShowConnectionTypeModal(true);
+        } else {
+          // Connection exists, proceed with normal flow
+          console.log("Existing connection found, proceeding with fetchQRCode");
+          fetchQRCode();
+        }
+      } catch (error) {
+        console.error("Error checking initial status:", error);
+        // On error, show the modal to let user choose
+        setShowConnectionTypeModal(true);
+      }
+    };
+
+    checkInitialStatus();
   }, [isAuthReady]);
 
   // Auto-select first phone that needs QR code
@@ -556,7 +672,7 @@ function LoadingPage2() {
 
           // Get company ID from SQL database
           const response = await fetch(
-            `https://bisnesgpt.jutateknologi.com/api/user/config?email=${encodeURIComponent(
+            `http://localhost:8443/api/user/config?email=${encodeURIComponent(
               userEmail
             )}`
           );
@@ -570,7 +686,7 @@ function LoadingPage2() {
           // Test if WebSocket endpoint is accessible
           console.log("Testing WebSocket endpoint accessibility...");
           try {
-            const testResponse = await fetch(`https://bisnesgpt.jutateknologi.com/api/health`, { 
+            const testResponse = await fetch(`http://localhost:8443/api/health`, { 
               method: 'GET',
               mode: 'cors'
             });
@@ -598,8 +714,8 @@ function LoadingPage2() {
 
           // Connect to WebSocket with proper protocol handling
           let wsUrl = window.location.protocol === 'https:' 
-            ? `wss://bisnesgpt.jutateknologi.com/ws/${userEmail}/${companyId}`
-            : `ws://bisnesgpt.jutateknologi.com/ws/${userEmail}/${companyId}`;
+            ? `ws://localhost:8443/ws/${userEmail}/${companyId}`
+            : `ws://localhost:8443/ws/${userEmail}/${companyId}`;
           
           console.log("Attempting WebSocket connection to:", wsUrl);
           console.log("User email:", userEmail);
@@ -616,8 +732,8 @@ function LoadingPage2() {
             
             // Try alternative WebSocket URL if first fails
             const alternativeUrl = wsUrl.includes('wss://') 
-              ? `ws://bisnesgpt.jutateknologi.com/ws/${userEmail}/${companyId}`
-              : `wss://bisnesgpt.jutateknologi.com/ws/${userEmail}/${companyId}`;
+              ? `ws://localhost:8443/ws/${userEmail}/${companyId}`
+              : `ws://localhost:8443/ws/${userEmail}/${companyId}`;
             
             console.log("Trying alternative WebSocket URL:", alternativeUrl);
             try {
@@ -1430,7 +1546,16 @@ function LoadingPage2() {
                     Loading QR Code...
                   </p>
                 </div>
-              ) : qrCodeImage ? (
+              ) : selectedConnectionType === 'official' ? (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg w-full max-w-md mx-auto">
+                  <div className="text-blue-700 font-medium mb-2 text-center">
+                    Official WhatsApp API Selected
+                  </div>
+                  <p className="text-sm text-blue-600 text-center">
+                    Please use the Official API connection dialog to connect your WhatsApp Business account.
+                  </p>
+                </div>
+              ) : qrCodeImage && selectedConnectionType !== 'official' ? (
                 <div className="mt-0.5 w-full flex flex-col items-center">
                   {/* Phone Selection for Multiple Phones */}
                   {phones && phones.length > 1 && (
@@ -1472,7 +1597,7 @@ function LoadingPage2() {
                           {phones.map((phone) => (
                             <button
                               key={phone.phoneIndex}
-                              onClick={() => reinitializeBot(phone.phoneIndex)}
+                              onClick={() => handleReinitializeClick(phone.phoneIndex)}
                               disabled={isReinitializing || reinitializeCooldown > 0}
                               className={`px-2 py-1 text-xs rounded transition-colors ${
                                 isReinitializing || reinitializeCooldown > 0
@@ -1511,7 +1636,7 @@ function LoadingPage2() {
               )}
 
               {/* Success Message when QR Code is Working */}
-              {qrCodeImage && (
+              {qrCodeImage && selectedConnectionType !== 'official' && (
                 <div className="mt-1 p-2 bg-green-50 border border-green-200 rounded-md w-full max-w-2xl mx-auto">
                   <div className="text-green-700 font-medium mb-1 text-sm text-center">
                     QR Code Ready - Scan to Connect
@@ -1520,59 +1645,63 @@ function LoadingPage2() {
               )}
 
               {/* Pairing Code Toggle Button */}
-              <div className="mt-0.5 text-center">
-                <button
-                  onClick={() => setShowPairingCode(!showPairingCode)}
-                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 underline focus:outline-none"
-                >
-                  {showPairingCode ? 'Hide' : 'Link With Phone Number (Optional)'}
-                </button>
-              </div>
-
-              {/* Pairing Code Section - Hidden by Default */}
-              {showPairingCode && (
-                <div className="mt-1 w-full max-w-md mx-auto">
-                  <input
-                    type="tel"
-                    value={phoneNumber || (phones && phones.find(p => p.phoneIndex === selectedPhoneIndex)?.phoneInfo) || ""}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="Enter phone number with country code eg: 60123456789"
-                    className="w-full px-3 py-2 border rounded-md text-gray-700 focus:outline-none focus:border-blue-500 text-sm"
-                  />
-                  <button
-                    onClick={requestPairingCode}
-                    disabled={isPairingCodeLoading || !phoneNumber}
-                    className="mt-1 px-4 py-2 bg-primary text-white text-sm font-semibold rounded hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 w-full disabled:bg-gray-400"
-                  >
-                    {isPairingCodeLoading ? (
-                      <span className="flex items-center justify-center">
-                        <LoadingIcon
-                          icon="three-dots"
-                          className="w-4 h-4 mr-1"
-                        />
-                        Generating...
-                      </span>
-                    ) : (
-                      "Get Pairing Code"
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {isPairingCodeLoading && (
-                <div className="mt-1 text-gray-600 dark:text-gray-400 text-sm">
-                  Generating pairing code...
-                </div>
-              )}
-                
-                {pairingCode && (
-                <div className="mt-1 p-2 bg-green-100 border border-green-400 text-green-700 rounded text-sm w-full max-w-md mx-auto">
-                    Your pairing code: <strong>{pairingCode}</strong>
-                  <p className="text-sm mt-1">
-                    Enter this code in your WhatsApp app to authenticate.
-                  </p>
+              {selectedConnectionType !== 'official' && (
+                <>
+                  <div className="mt-0.5 text-center">
+                    <button
+                      onClick={() => setShowPairingCode(!showPairingCode)}
+                      className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 underline focus:outline-none"
+                    >
+                      {showPairingCode ? 'Hide' : 'Link With Phone Number (Optional)'}
+                    </button>
                   </div>
-                )}
+
+                  {/* Pairing Code Section - Hidden by Default */}
+                  {showPairingCode && (
+                    <div className="mt-1 w-full max-w-md mx-auto">
+                      <input
+                        type="tel"
+                        value={phoneNumber || (phones && phones.find(p => p.phoneIndex === selectedPhoneIndex)?.phoneInfo) || ""}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        placeholder="Enter phone number with country code eg: 60123456789"
+                        className="w-full px-3 py-2 border rounded-md text-gray-700 focus:outline-none focus:border-blue-500 text-sm"
+                      />
+                      <button
+                        onClick={requestPairingCode}
+                        disabled={isPairingCodeLoading || !phoneNumber}
+                        className="mt-1 px-4 py-2 bg-primary text-white text-sm font-semibold rounded hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 w-full disabled:bg-gray-400"
+                      >
+                        {isPairingCodeLoading ? (
+                          <span className="flex items-center justify-center">
+                            <LoadingIcon
+                              icon="three-dots"
+                              className="w-4 h-4 mr-1"
+                            />
+                            Generating...
+                          </span>
+                        ) : (
+                          "Get Pairing Code"
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {isPairingCodeLoading && (
+                    <div className="mt-1 text-gray-600 dark:text-gray-400 text-sm">
+                      Generating pairing code...
+                    </div>
+                  )}
+
+                  {pairingCode && (
+                    <div className="mt-1 p-2 bg-green-100 border border-green-400 text-green-700 rounded text-sm w-full max-w-md mx-auto">
+                      Your pairing code: <strong>{pairingCode}</strong>
+                      <p className="text-sm mt-1">
+                        Enter this code in your WhatsApp app to authenticate.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
               </>
             ) : (
               <>
@@ -1628,7 +1757,7 @@ function LoadingPage2() {
                           )}
                           {/* Add reinitialize button for each phone */}
                           <button
-                            onClick={() => reinitializeBot(phone.phoneIndex)}
+                            onClick={() => handleReinitializeClick(phone.phoneIndex)}
                             disabled={isReinitializing || reinitializeCooldown > 0}
                             className={`px-2 py-1 text-xs rounded transition-colors ${
                               isReinitializing || reinitializeCooldown > 0
@@ -1791,7 +1920,7 @@ function LoadingPage2() {
             
             {/* Reinitialize Bot Button */}
             <button
-              onClick={() => reinitializeBot()}
+              onClick={() => handleReinitializeClick()}
               disabled={isReinitializing || reinitializeCooldown > 0 || !phones || phones.length === 0}
               className={`flex-1 px-4 py-3 text-sm font-semibold rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-opacity-50 shadow-sm hover:shadow-md ${
                 isReinitializing || reinitializeCooldown > 0
@@ -1844,6 +1973,29 @@ function LoadingPage2() {
 
           </div>
         )}
+
+        {/* Connection Type Selection Modal */}
+        <ConnectionTypeModal
+          isOpen={showConnectionTypeModal}
+          onClose={() => setShowConnectionTypeModal(false)}
+          onSelect={handleConnectionTypeSelect}
+        />
+
+        {/* 360dialog Connect Component */}
+        <Dialog open={showDialog360Connect && !!companyId} onClose={handleDialog360Cancel}>
+          <div className="fixed inset-0 flex items-center justify-center p-4 bg-black bg-opacity-50">
+            <Dialog.Panel className="relative bg-white rounded-xl max-w-md w-full shadow-xl">
+              {companyId && (
+                <Dialog360Connect
+                  companyId={companyId}
+                  phoneIndex={pendingPhoneIndex ?? 0}
+                  onSuccess={handleDialog360Success}
+                  onCancel={handleDialog360Cancel}
+                />
+              )}
+            </Dialog.Panel>
+          </div>
+        </Dialog>
     </div>
   );
 }

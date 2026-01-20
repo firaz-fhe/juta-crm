@@ -51,7 +51,7 @@ interface FeedbackResponse {
 export class DataImportService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'https://bisnesgpt.jutateknologi.com') {
+  constructor(baseUrl: string = 'http://localhost:8443') {
     this.baseUrl = baseUrl;
   }
 

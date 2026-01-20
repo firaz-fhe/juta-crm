@@ -2,13 +2,13 @@
 export const BACKEND_CONFIG = {
   // Development
   development: {
-    baseUrl: 'https://bisnesgpt.jutateknologi.com',
-    apiUrl: 'https://bisnesgpt.jutateknologi.com/api'
+    baseUrl: 'http://localhost:8443',
+    apiUrl: 'http://localhost:8443/api'
   },
   // Production - replace with your actual Neon backend URL
   production: {
-    baseUrl: 'https://bisnesgpt.jutateknologi.com',
-    apiUrl: 'https://bisnesgpt.jutateknologi.com/api'
+    baseUrl: 'http://localhost:8443',
+    apiUrl: 'http://localhost:8443/api'
   }
 };
 

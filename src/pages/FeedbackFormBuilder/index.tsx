@@ -43,7 +43,7 @@ function FeedbackFormBuilder() {
   });
   const [companyId, setCompanyId] = useState<string>('');
   const [userEmail, setUserEmail] = useState<string>('');
-  const [baseUrl] = useState<string>('https://bisnesgpt.jutateknologi.com');
+  const [baseUrl] = useState<string>('http://localhost:8443');
 
   useEffect(() => {
     fetchUserData();

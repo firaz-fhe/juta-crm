@@ -40,7 +40,7 @@ function PublicAttendanceForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState(phone || '');
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [baseUrl] = useState<string>('https://bisnesgpt.jutateknologi.com');
+  const [baseUrl] = useState<string>('http://localhost:8443');
 
   useEffect(() => {
     if (eventTitle) {

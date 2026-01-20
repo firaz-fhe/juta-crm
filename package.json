@@ -31,9 +31,10 @@
     "@mui/icons-material": "^5.15.15",
     "@mui/material": "^5.15.15",
     "@mui/x-date-pickers": "^7.28.0",
-    "@reduxjs/toolkit": "^1.8.5",
+    "@reduxjs/toolkit": "^2.0.0",
     "@stripe/stripe-js": "^4.1.0",
     "@types/react-toastify": "^4.0.2",
+    "360dialog-connect-button": "^0.9.1",
     "axios": "^1.8.4",
     "buffer": "^6.0.3",
     "chart.js": "^4.4.3",
@@ -138,5 +139,6 @@
     "tailwindcss": "^3.4.3",
     "typescript": "^5.3.3",
     "vite": "^5.2.10"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

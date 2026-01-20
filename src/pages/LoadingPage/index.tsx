@@ -10,6 +10,9 @@ import { BookOpen, X } from "lucide-react";
 import { Dialog } from "@/components/Base/Headless";
 import Lucide from "@/components/Base/Lucide";
 import { toast } from "react-toastify";
+import ConnectionTypeModal from "../../components/ConnectionTypeModal";
+import Dialog360Connect from "../../components/Dialog360Connect";
+import MetaDirectConnect from "../../components/MetaDirectConnect";
 interface Contact {
   chat_id: string;
   chat_pic?: string | null;
@@ -62,7 +65,7 @@ interface BotStatusResponse {
 }
 
 function LoadingPage() {
-  const baseUrl = "https://bisnesgpt.jutateknologi.com";
+  const baseUrl = "http://localhost:8443";
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +118,14 @@ function LoadingPage() {
   const [disconnectPhoneIndex, setDisconnectPhoneIndex] = useState<
     number | undefined
   >(undefined);
+
+  // Connection type modal state
+  const [showConnectionTypeModal, setShowConnectionTypeModal] = useState(false);
+  const [showDialog360Connect, setShowDialog360Connect] = useState(false);
+  const [showMetaDirectConnect, setShowMetaDirectConnect] = useState(false);
+  const [pendingPhoneIndex, setPendingPhoneIndex] = useState<number | undefined>(undefined);
+  const [hasCheckedInitialStatus, setHasCheckedInitialStatus] = useState(false);
+  const [selectedConnectionType, setSelectedConnectionType] = useState<'qr' | 'official' | null>(null);
 
   // Debug useEffect to monitor state changes
   useEffect(() => {
@@ -184,7 +195,7 @@ function LoadingPage() {
       // Get user config to get companyId
       console.log("=== Calling /api/user/config ===");
       const userResponse = await fetch(
-        `https://bisnesgpt.jutateknologi.com/api/user/config?email=${encodeURIComponent(
+        `http://localhost:8443/api/user/config?email=${encodeURIComponent(
           userEmail
         )}`,
         {
@@ -228,11 +239,11 @@ function LoadingPage() {
       console.log("=== Calling /api/bot-status/${companyId} ===");
       console.log(
         "API URL:",
-        `https://bisnesgpt.jutateknologi.com/api/bot-status/${companyId}`
+        `http://localhost:8443/api/bot-status/${companyId}`
       );
 
       const statusResponse = await fetch(
-        `https://bisnesgpt.jutateknologi.com/api/bot-status/${companyId}`,
+        `http://localhost:8443/api/bot-status/${companyId}`,
         {
           method: "GET",
           headers: {
@@ -526,7 +537,7 @@ function LoadingPage() {
 
       // Get user config to get companyId
       const userResponse = await fetch(
-        `https://bisnesgpt.jutateknologi.com/api/user/config?email=${encodeURIComponent(
+        `http://localhost:8443/api/user/config?email=${encodeURIComponent(
           userEmail
         )}`,
         {
@@ -547,7 +558,7 @@ function LoadingPage() {
       const companyId = userData.company_id;
 
       const response = await fetch(
-        "https://bisnesgpt.jutateknologi.com/api/bots/reinitialize",
+        "http://localhost:8443/api/bots/reinitialize",
         {
           method: "POST",
           headers: {
@@ -620,6 +631,81 @@ function LoadingPage() {
     } finally {
       setIsReinitializing(false);
     }
+  };
+
+  // Connection type selection handlers
+  const handleReinitializeClick = (phoneIndex?: number) => {
+    setPendingPhoneIndex(phoneIndex);
+    setShowConnectionTypeModal(true);
+  };
+
+  const handleConnectionTypeSelect = async (type: 'qr' | 'official') => {
+    console.log("Connection type selected:", type);
+    setShowConnectionTypeModal(false);
+    setSelectedConnectionType(type);
+
+    if (type === 'qr') {
+      // Proceed with existing wwebjs QR code flow
+      if (pendingPhoneIndex !== undefined) {
+        // Reinitializing an existing phone
+        reinitializeBot(pendingPhoneIndex);
+      } else {
+        // Initial connection - fetch QR code
+        fetchQRCode();
+      }
+    } else {
+      // Ensure we have companyId before showing dialog
+      if (!companyId) {
+        console.log("CompanyId not set, fetching...");
+        try {
+          const email = localStorage.getItem("userEmail");
+          if (!email) {
+            console.error("No user email found");
+            setError("Please login first");
+            return;
+          }
+
+          const response = await fetch(`${baseUrl}/api/user-context?email=${encodeURIComponent(email)}`);
+          if (!response.ok) throw new Error("Failed to fetch user context");
+
+          const data = await response.json();
+          console.log("Fetched companyId:", data.companyId);
+          setCompanyId(data.companyId);
+        } catch (err) {
+          console.error("Error fetching companyId:", err);
+          setError("Failed to fetch company information");
+          return;
+        }
+      }
+
+      console.log("Showing MetaDirectConnect with companyId:", companyId);
+      // Show Meta Direct connect component
+      setShowMetaDirectConnect(true);
+    }
+  };
+
+  const handleDialog360Success = () => {
+    setShowDialog360Connect(false);
+    setPendingPhoneIndex(undefined);
+    // Refresh the page to show the new connection
+    window.location.reload();
+  };
+
+  const handleDialog360Cancel = () => {
+    setShowDialog360Connect(false);
+    setPendingPhoneIndex(undefined);
+  };
+
+  const handleMetaDirectSuccess = () => {
+    setShowMetaDirectConnect(false);
+    setPendingPhoneIndex(undefined);
+    // Refresh the page to show the new connection
+    window.location.reload();
+  };
+
+  const handleMetaDirectCancel = () => {
+    setShowMetaDirectConnect(false);
+    setPendingPhoneIndex(undefined);
   };
 
   // Bot disconnect functionality
@@ -749,9 +835,52 @@ function LoadingPage() {
   };
 
   useEffect(() => {
-    if (isAuthReady) {
-      fetchQRCode();
-    }
+    const checkInitialStatus = async () => {
+      if (!isAuthReady || hasCheckedInitialStatus) return;
+
+      setHasCheckedInitialStatus(true);
+
+      try {
+        const email = localStorage.getItem("userEmail");
+        if (!email) {
+          console.error("No user email found");
+          return;
+        }
+
+        const response = await fetch(`${baseUrl}/api/user-context?email=${encodeURIComponent(email)}`);
+        if (!response.ok) throw new Error("Failed to fetch user context");
+
+        const data = await response.json();
+        const userCompanyId = data.companyId;
+
+        // Check bot status
+        const statusResponse = await fetch(`${baseUrl}/bot-status/${userCompanyId}`);
+        if (!statusResponse.ok) throw new Error("Failed to fetch bot status");
+
+        const statusData = await statusResponse.json();
+
+        // Check if any phone is ready/authenticated
+        const hasConnectedPhone = statusData.phones?.some(
+          (phone: Phone) => phone.status === 'ready' || phone.status === 'authenticated'
+        ) || statusData.status === 'ready' || statusData.status === 'authenticated';
+
+        if (!hasConnectedPhone) {
+          // No connection exists, show connection type modal
+          console.log("No existing connection found, showing connection type modal");
+          setShowConnectionTypeModal(true);
+        } else {
+          // Connection exists, proceed with normal flow
+          console.log("Existing connection found, proceeding with fetchQRCode");
+          fetchQRCode();
+        }
+      } catch (error) {
+        console.error("Error checking initial status:", error);
+        // On error, show the modal to let user choose
+        setShowConnectionTypeModal(true);
+      }
+    };
+
+    checkInitialStatus();
   }, [isAuthReady]);
 
   // Auto-select first phone that needs QR code (only if no manual selection made)
@@ -792,7 +921,7 @@ function LoadingPage() {
         setIsPolling(true);
 
         const statusResponse = await fetch(
-          `https://bisnesgpt.jutateknologi.com/api/bot-status/${companyId}`,
+          `http://localhost:8443/api/bot-status/${companyId}`,
           {
             method: "GET",
             headers: {
@@ -986,7 +1115,7 @@ function LoadingPage() {
           // Get company ID from SQL database
           console.log("=== WebSocket: Calling /api/user/config ===");
           const response = await fetch(
-            `https://bisnesgpt.jutateknologi.com/api/user/config?email=${encodeURIComponent(
+            `http://localhost:8443/api/user/config?email=${encodeURIComponent(
               userEmail
             )}`
           );
@@ -1030,7 +1159,7 @@ function LoadingPage() {
           console.log("=== WebSocket: Testing endpoint accessibility ===");
           try {
             const testResponse = await fetch(
-              `https://bisnesgpt.jutateknologi.com/api/health`,
+              `http://localhost:8443/api/health`,
               {
                 method: "GET",
                 mode: "cors",
@@ -1068,8 +1197,8 @@ function LoadingPage() {
           console.log("=== WebSocket: Constructing connection URL ===");
           let wsUrl =
             window.location.protocol === "https:"
-              ? `wss://bisnesgpt.jutateknologi.com/ws/${userEmail}/${companyId}`
-              : `ws://bisnesgpt.jutateknologi.com/ws/${userEmail}/${companyId}`;
+              ? `ws://localhost:8443/ws/${userEmail}/${companyId}`
+              : `ws://localhost:8443/ws/${userEmail}/${companyId}`;
 
           console.log("=== WebSocket: Connection details ===");
           console.log("Attempting WebSocket connection to:", wsUrl);
@@ -1100,8 +1229,8 @@ function LoadingPage() {
 
             // Try alternative WebSocket URL if first fails
             const alternativeUrl = wsUrl.includes("wss://")
-              ? `ws://bisnesgpt.jutateknologi.com/ws/${userEmail}/${companyId}`
-              : `wss://bisnesgpt.jutateknologi.com/ws/${userEmail}/${companyId}`;
+              ? `ws://localhost:8443/ws/${userEmail}/${companyId}`
+              : `ws://localhost:8443/ws/${userEmail}/${companyId}`;
 
             console.log("Trying alternative WebSocket URL:", alternativeUrl);
             try {
@@ -2587,18 +2716,18 @@ function LoadingPage() {
 
                 {/* Secondary Actions Row - Second Row */}
                 <div className="flex gap-2">
-                  {/* Reinitialize Bot Button */}
+                  {/* Connect/Reinitialize Bot Button */}
                   <button
-                    onClick={() => reinitializeBot()}
+                    onClick={() => handleReinitializeClick()}
                     disabled={
                       isReinitializing ||
-                      reinitializeCooldown > 0 ||
-                      !phones ||
-                      phones.length === 0
+                      reinitializeCooldown > 0
                     }
                     className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-opacity-50 shadow-sm hover:shadow-md ${
                       isReinitializing || reinitializeCooldown > 0
                         ? "bg-orange-500 text-white cursor-not-allowed"
+                        : phones && phones.length === 0
+                        ? "bg-green-500 text-white hover:bg-green-600 focus:ring-green-500"
                         : "bg-orange-500 text-white hover:bg-orange-600 focus:ring-orange-500"
                     }`}
                   >
@@ -2636,15 +2765,20 @@ function LoadingPage() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2M9 14l3-3m0 0l3 3m-3-3V4"
+                            d={phones && phones.length === 0
+                              ? "M12 4v16m8-8H4"
+                              : "M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2M9 14l3-3m0 0l3 3m-3-3V4"
+                            }
                           />
                         </svg>
                       )}
                       <span className="font-medium text-sm">
                         {isReinitializing
-                          ? "Restarting..."
+                          ? "Connecting..."
                           : reinitializeCooldown > 0
                           ? `Wait (${reinitializeCooldown}s)`
+                          : phones && phones.length === 0
+                          ? "Connect WhatsApp"
                           : "Restart Bot"}
                       </span>
                     </div>
@@ -2994,6 +3128,41 @@ function LoadingPage() {
               </button>
             </div>
           </div>
+        </Dialog.Panel>
+      </Dialog>
+
+      {/* Connection Type Selection Modal */}
+      <ConnectionTypeModal
+        isOpen={showConnectionTypeModal}
+        onClose={() => setShowConnectionTypeModal(false)}
+        onSelect={handleConnectionTypeSelect}
+      />
+
+      {/* 360dialog Connect Component */}
+      <Dialog open={showDialog360Connect && !!companyId} onClose={handleDialog360Cancel}>
+        <Dialog.Panel className="relative bg-white rounded-xl max-w-md w-full shadow-xl">
+          {companyId && (
+            <Dialog360Connect
+              companyId={companyId}
+              phoneIndex={pendingPhoneIndex ?? 0}
+              onSuccess={handleDialog360Success}
+              onCancel={handleDialog360Cancel}
+            />
+          )}
+        </Dialog.Panel>
+      </Dialog>
+
+      {/* Meta Direct Connect Component */}
+      <Dialog open={showMetaDirectConnect && !!companyId} onClose={handleMetaDirectCancel}>
+        <Dialog.Panel className="relative bg-white rounded-xl max-w-md w-full shadow-xl">
+          {companyId && (
+            <MetaDirectConnect
+              companyId={companyId}
+              phoneIndex={pendingPhoneIndex ?? 0}
+              onSuccess={handleMetaDirectSuccess}
+              onCancel={handleMetaDirectCancel}
+            />
+          )}
         </Dialog.Panel>
       </Dialog>
     </div>

@@ -38,7 +38,7 @@ const OnboardingAIResponses: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
 
   const navigate = useNavigate();
-  const baseUrl = 'https://bisnesgpt.jutateknologi.com';
+  const baseUrl = 'http://localhost:8443';
 
   const steps = [
     { id: 1, title: "Welcome", icon: "🤖" },
